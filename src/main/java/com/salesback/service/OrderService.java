@@ -19,6 +19,8 @@ import com.salesback.model.enums.EnumOrderType;
 import com.salesback.repository.OrderRepository;
 import com.salesback.repository.ProductRepository;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+
 @Service
 public class OrderService {
     
@@ -42,7 +44,7 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    
+    @CircuitBreaker(name = "servicebeta")
     public Order sellProduct(ProductDTO product){
         RestTemplate restTemplate = new RestTemplate();
         String url_getProduct = "http://localhost:8080/product/findByName/";
