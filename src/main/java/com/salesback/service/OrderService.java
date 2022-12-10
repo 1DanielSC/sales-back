@@ -45,14 +45,18 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
-    @CircuitBreaker(name = "servicebeta")
+    @CircuitBreaker(name = "servicebeta", fallbackMethod = "buildFallBack")
     public ResponseEntity<Product> getProductByName(String productName){
         return repository.findProductByName(productName);
     }
 
-    @CircuitBreaker(name = "servicebeta")
+    @CircuitBreaker(name = "servicebeta", fallbackMethod = "buildFallBack")
     public ResponseEntity<Product> updateProduct(Product product){
         return repository.updateProduct(product);
+    }
+
+    public ResponseEntity<?> buildFallBack(Throwable t){
+        return ResponseEntity.ok("Fallback in action");
     }
 
     public Order sellProduct(ProductDTO product){
