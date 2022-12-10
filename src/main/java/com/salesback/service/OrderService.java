@@ -14,7 +14,6 @@ import com.salesback.model.Product;
 import com.salesback.model.dto.ProductDTO;
 import com.salesback.model.enums.EnumOrderType;
 import com.salesback.repository.OrderRepository;
-import com.salesback.repository.ProductRepository;
 import com.salesback.service.interfaces.ProductServiceInterface;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -24,9 +23,6 @@ public class OrderService {
     
     @Autowired
     private OrderRepository orderRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
 
     private ProductServiceInterface repository;
 
@@ -125,8 +121,4 @@ public class OrderService {
 
     }
 
-
-    public boolean checkIfPresentByName(Product product){
-        return productRepository.findByName(product.getName()).isPresent();
-    }
 }
