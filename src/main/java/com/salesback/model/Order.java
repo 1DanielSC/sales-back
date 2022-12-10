@@ -6,8 +6,6 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import com.salesback.model.enums.EnumOrderType;
@@ -19,11 +17,13 @@ public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
-
-    @ManyToOne
-    @JoinColumn(name="id_product")
-    public Product product;
     
+    public String productName;
+
+    public Double productPrice;
+
+    public Long quantity;
+
     public Date date;
 
     public EnumOrderType type;
@@ -34,14 +34,6 @@ public class Order {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public Product getProduct() {
-        return product;
-    }
-
-    public void setProduct(Product product) {
-        this.product = product;
     }
 
     public Date getDate() {
@@ -59,5 +51,30 @@ public class Order {
     public void setType(EnumOrderType type) {
         this.type = type;
     }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public Double getProductPrice() {
+        return productPrice;
+    }
+
+    public void setProductPrice(Double productPrice) {
+        this.productPrice = productPrice;
+    }
+
+    public Long getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Long quantity) {
+        this.quantity = quantity;
+    }
+    
     
 }

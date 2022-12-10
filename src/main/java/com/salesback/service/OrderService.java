@@ -18,6 +18,7 @@ import com.salesback.model.dto.ProductDTO;
 import com.salesback.model.enums.EnumOrderType;
 import com.salesback.repository.OrderRepository;
 import com.salesback.repository.ProductRepository;
+import com.salesback.service.interfaces.ProductServiceInterface;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
@@ -29,6 +30,13 @@ public class OrderService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    private ProductServiceInterface repository;
+
+    @Autowired
+    public OrderService(ProductServiceInterface psi){
+        this.repository = psi;
+    }
 
     public Order findById(Long id){
         Optional<Order> order = orderRepository.findById(id);
@@ -45,32 +53,36 @@ public class OrderService {
     }
 
     @CircuitBreaker(name = "servicebeta")
-    public Order sellProduct(ProductDTO product){
-        RestTemplate restTemplate = new RestTemplate();
-        String url_getProduct = "http://localhost:8080/product/findByName/";
+    public ResponseEntity<Product> getProductByName(String productName){
+        return repository.findProductByName(productName);
+    }
 
-        ResponseEntity<Product> response = restTemplate.getForEntity(url_getProduct + product.getName(), Product.class);
+    @CircuitBreaker(name = "servicebeta")
+    public ResponseEntity<Product> updateProduct(Product product){
+        return repository.updateProduct(product);
+    }
+
+    public Order sellProduct(ProductDTO product){
+        ResponseEntity<Product> response = getProductByName(product.getName());
         
         if(response.getStatusCode() == HttpStatus.OK){
             Product productReceived = response.getBody();
             
             if(productReceived != null){
-                //System.out.println("Recebido: " + product.getName() +" " +product.getPrice() +" " + product.getQuantity());
                 
                 if(productReceived.getQuantity() < product.getQuantity()){
                     System.out.println("Quantity greater than available");
                     return null;
                 }
 
-                String url_updateProduct = "http://localhost:8080/product/update";
                 productReceived.setQuantity(productReceived.getQuantity() - product.getQuantity());
-
-                HttpEntity<Product> request = new HttpEntity<>(productReceived);
-                ResponseEntity<Product> requestUpdate = restTemplate.exchange(url_updateProduct, HttpMethod.PUT, request, Product.class);
+                ResponseEntity<Product> requestUpdate = updateProduct(productReceived);
                 
-                if(requestUpdate.getStatusCode() == HttpStatus.OK){
+                if(requestUpdate.getStatusCode() == HttpStatus.OK){    
                     Order order = new Order();
-                    order.setProduct(productReceived);
+                    order.setProductName(productReceived.getName());
+                    order.setProductPrice(productReceived.getPrice());
+                    order.setQuantity(product.getQuantity());
                     order.setType(EnumOrderType.SELL);
                     return save(order);
                 }
@@ -95,8 +107,6 @@ public class OrderService {
             Product productReceived = response.getBody();
 
             if(productReceived != null){
-                //System.out.println("Recebido: " + product.getName() + " " +product.getPrice() + " " + product.getQuantity());
-                
                 String url_updateProduct = "http://localhost:8080/product/update";
                 productReceived.setQuantity(productReceived.getQuantity() + product.getQuantity());
 
@@ -110,7 +120,7 @@ public class OrderService {
                         productRepository.save(productReceived);
                     }
 
-                    order.setProduct(productReceived);
+                    //order.setProduct(productReceived);
                     order.setType(EnumOrderType.BUY);
                     return save(order);
                 }
