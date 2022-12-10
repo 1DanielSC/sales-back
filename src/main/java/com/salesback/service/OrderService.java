@@ -5,12 +5,9 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import com.salesback.model.Order;
 import com.salesback.model.Product;
@@ -98,29 +95,21 @@ public class OrderService {
     }
 
     public Order buyProduct(ProductDTO product){
-        RestTemplate restTemplate = new RestTemplate();
-        String url_getProduct = "http://localhost:8080/product/findByName/";
-
-        ResponseEntity<Product> response = restTemplate.getForEntity(url_getProduct + product.getName(), Product.class);
+        ResponseEntity<Product> response = getProductByName(product.getName());
 
         if(response.getStatusCode() == HttpStatus.OK){
             Product productReceived = response.getBody();
 
             if(productReceived != null){
-                String url_updateProduct = "http://localhost:8080/product/update";
-                productReceived.setQuantity(productReceived.getQuantity() + product.getQuantity());
 
-                HttpEntity<Product> request = new HttpEntity<>(productReceived);
-                ResponseEntity<Product> requestUpdate = restTemplate.exchange(url_updateProduct, HttpMethod.PUT, request, Product.class);
-                
+                productReceived.setQuantity(productReceived.getQuantity() + product.getQuantity());
+                ResponseEntity<Product> requestUpdate = updateProduct(productReceived);
+
                 if(requestUpdate.getStatusCode() == HttpStatus.OK){
                     Order order = new Order();
-
-                    if(!checkIfPresentByName(productReceived)){
-                        productRepository.save(productReceived);
-                    }
-
-                    //order.setProduct(productReceived);
+                    order.setProductName(product.getName());
+                    order.setQuantity(product.getQuantity());
+                    order.setProductPrice(product.getPrice());
                     order.setType(EnumOrderType.BUY);
                     return save(order);
                 }
