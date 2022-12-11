@@ -16,7 +16,9 @@ import com.salesback.model.enums.EnumOrderType;
 import com.salesback.repository.OrderRepository;
 import com.salesback.service.interfaces.ProductServiceInterface;
 
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 
 @Service
 public class OrderService {
@@ -46,17 +48,32 @@ public class OrderService {
     }
 
     @CircuitBreaker(name = "servicebeta", fallbackMethod = "buildFallBack")
+    @Retry(name = "retryservicebeta", fallbackMethod = "retryFallBack")
+    @Bulkhead(name = "bulkheadservicebeta", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "bulkheadFallBack")
     public ResponseEntity<Product> getProductByName(String productName){
         return repository.findProductByName(productName);
     }
 
     @CircuitBreaker(name = "servicebeta", fallbackMethod = "buildFallBack")
+    @Retry(name = "retryProductService", fallbackMethod = "retryFallBack")
+    @Bulkhead(name = "bulkheadservicebeta", fallbackMethod = "bulkheadFallBack")
     public ResponseEntity<Product> updateProduct(Product product){
         return repository.updateProduct(product);
     }
 
-    public ResponseEntity<?> buildFallBack(Throwable t){
-        return ResponseEntity.ok("Fallback in action");
+    public ResponseEntity<String> bulkheadFallBack(Exception t){
+        System.out.println("BULKHEAD - Falha no product ");
+        return ResponseEntity.ok("failllllllllll");
+    } 
+
+    public ResponseEntity<String> retryProductService(Exception t){
+        System.out.println("SERVIÇO CAIU - Falha no product ");
+        return ResponseEntity.ok("failllllllllll");
+    }    
+
+    public ResponseEntity<String> buildFallBack(Exception t){
+        System.out.println("Falha no product");
+        return ResponseEntity.ok("failllllllllll");
     }
 
     public Order sellProduct(ProductDTO product){
