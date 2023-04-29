@@ -3,17 +3,18 @@ package com.salesback.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import com.salesback.model.Item;
 import com.salesback.model.Order;
-import com.salesback.model.dto.ProductDTO;
+import com.salesback.model.enums.EnumStatusOrder;
 import com.salesback.service.OrderService;
 
 @Controller
@@ -21,24 +22,16 @@ import com.salesback.service.OrderService;
 public class OrderController {
     
     @Autowired
-    private OrderService orderService;
+    private OrderService service;
 
-    @Value("${server.port}")
-    private String port;
-
-    @GetMapping(value = "/sayHi")
-    public ResponseEntity<String> sayHi(){
-        return ResponseEntity.ok("Hi from + " + port);
-    }
-
-    @GetMapping(value = "/findAll")
+    @GetMapping
     public ResponseEntity<List<Order>> findAll(){
-        return ResponseEntity.ok(orderService.findAll());
+        return ResponseEntity.ok(service.findAll());
     }
 
-    @GetMapping(value = "/findById/{id}")
-    public ResponseEntity<Order> findOrderById(@PathVariable(value = "id") Long orderId){
-        Order order = orderService.findById(orderId);
+    @GetMapping(value = "/{id}")
+    public ResponseEntity<Order> findById(@PathVariable(value = "id") Long orderId){
+        Order order = service.findById(orderId);
 
         if(order != null)
             return ResponseEntity.ok(order);
@@ -46,24 +39,18 @@ public class OrderController {
             return ResponseEntity.notFound().build();
     }
 
-    @PostMapping(value = "/sell")
-    public ResponseEntity<Order> sellProduct(@RequestBody ProductDTO product){
-        Order order = orderService.sellProduct(product);
-
-        if(order != null)
-            return ResponseEntity.ok(order);
-        else
-            return ResponseEntity.notFound().build();
+    @PostMapping
+    public ResponseEntity<Order> createOrder(@RequestBody(required = true) Order entity){
+        return ResponseEntity.ok(service.createOrder(entity));
     }
 
-    @PostMapping(value = "/buy")
-    public ResponseEntity<Order> buyProduct(@RequestBody ProductDTO product){
-        Order order = orderService.buyProduct(product);
-
-        if(order != null)
-            return ResponseEntity.ok(order);
-        else
-            return ResponseEntity.notFound().build();
+    @PatchMapping("/{id}/status/{status}")
+    public ResponseEntity<Order> updateStatus(@PathVariable(value = "id") Long orderId, @PathVariable(value = "status") EnumStatusOrder status){
+        return ResponseEntity.ok(service.updateStatus(orderId, status));
     }
 
+    @PostMapping("/{id}/item")
+    public ResponseEntity<Order> addItemToOrder(@PathVariable(value = "id") Long orderId, @RequestBody(required = true) Item item){
+        return ResponseEntity.ok(service.addItemToOrder(orderId, item));
+    }
 }

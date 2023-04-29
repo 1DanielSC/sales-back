@@ -1,10 +1,14 @@
 package com.salesback.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import com.salesback.model.Product;
+import com.salesback.model.Item;
+import com.salesback.model.dto.ProductDTO;
 import com.salesback.service.interfaces.ProductServiceInterface;
 
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
@@ -21,18 +25,18 @@ public class OrderResilience {
         this.repository = repository;
     }
 
-    @CircuitBreaker(name = "getProductNameBreaker", fallbackMethod = "buildFallBack")
+    @CircuitBreaker(name = "updateProductBreaker", fallbackMethod = "buildFallBackUpdate")
     @Retry(name = "retryservicebeta", fallbackMethod = "retryFallBack")
-    @Bulkhead(name = "getProductNameBulk", fallbackMethod = "bulkheadFallBack")
-    public ResponseEntity<Product> getProductByName(String productName){
-        return repository.findProductByName(productName);
+    @Bulkhead(name = "updateProductBulk", fallbackMethod = "buildBulkheadUpdate")
+    public ResponseEntity<ProductDTO> requestProduct(ProductDTO product){
+        return repository.requestProduct(product);
     }
 
     @CircuitBreaker(name = "updateProductBreaker", fallbackMethod = "buildFallBackUpdate")
     @Retry(name = "retryservicebeta", fallbackMethod = "retryFallBack")
     @Bulkhead(name = "updateProductBulk", fallbackMethod = "buildBulkheadUpdate")
-    public ResponseEntity<Product> updateProduct(Product product){
-        return repository.updateProduct(product);
+    public ResponseEntity<List<ProductDTO>> increaseQuantity(List<Item> items){
+        return repository.increaseQuantity(items);
     }
 
     //BULKHEAD - FALLBACK
@@ -41,15 +45,18 @@ public class OrderResilience {
         return ResponseEntity.ok("Fail: BULKHEAD (GET)");
     } 
 
-    public ResponseEntity<String> buildBulkheadUpdate(Product product, Throwable t){
+    public ResponseEntity<String> buildBulkheadUpdate(ProductDTO product, Throwable t){
+        System.out.println(t.getMessage());
+        System.out.println(t.getCause());
+
         System.out.println("\n\nBULKHEAD (UPDATE) - Falha no product " + product.getName() +"\n\n");
-        return ResponseEntity.ok("Fail: BULKHEAD (UPDATE)");
+        return ResponseEntity.internalServerError().build();
     }
 
     //RETRY - FALLBACK
     public ResponseEntity<String> retryFallBack(Throwable t){
         System.out.println("SERVIÇO CAIU - Falha no product ");
-        return ResponseEntity.ok("failllllllllll");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
     }    
 
     //CIRCUIT BREAKER - FALLBACK 
@@ -58,7 +65,7 @@ public class OrderResilience {
         return ResponseEntity.ok("Fail: CIRCUIT BREAKER (GET)");
     }
 
-    public ResponseEntity<String> buildFallBackUpdate(Product product, Throwable t){
+    public ResponseEntity<String> buildFallBackUpdate(ProductDTO product, Throwable t){
         System.out.println("\n\nCIRCUIT BREAKER (UPDATE): Falha no product " + product.getName()+"\n\n");
         return ResponseEntity.ok("Fail: CIRCUIT BREAKER (UPDATE)");
     }
