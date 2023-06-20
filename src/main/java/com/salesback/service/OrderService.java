@@ -2,13 +2,12 @@ package com.salesback.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.salesback.exceptions.APIConnectionError;
 import com.salesback.exceptions.BadRequestException;
@@ -20,12 +19,16 @@ import com.salesback.model.Order;
 import com.salesback.model.dto.ProductDTO;
 import com.salesback.model.enums.EnumStatusOrder;
 import com.salesback.repository.OrderRepository;
+import com.salesback.service.interfaces.ProductServiceClient;
 
 @Service
 public class OrderService {
     
     @Autowired
     private OrderRepository repository;
+
+    @Autowired
+    private ProductServiceClient productClient;
 
     private OrderResilience orderResilience;
 
@@ -35,8 +38,8 @@ public class OrderService {
     }
 
     public Order findById(Long id){
-        Optional<Order> order = repository.findById(id);
-        return order.isPresent() ? order.get() : null;
+        return repository.findById(id)
+            .orElseThrow(() -> new NotFoundException("Order not found."));
     }
 
     public List<Order> findAll(){
@@ -44,10 +47,7 @@ public class OrderService {
     }
 
     public Order updateStatus(Long id, EnumStatusOrder status){
-
         Order order = findById(id);
-        if(order==null)
-            throw new NotFoundException("Order not found.");
         
         if(status == EnumStatusOrder.APPROVED)
             return placeOrder(order);
@@ -59,13 +59,27 @@ public class OrderService {
         throw new BadRequestException("Invalid status.");
     }
 
-
+    @Transactional(readOnly = false)
     public Order createOrder(Order order){
         order.setId(null);
         order.setDate(LocalDateTime.now());
         order.setStatus(EnumStatusOrder.CREATED);
       
         return repository.save(order);
+    }
+
+    private ProductDTO requestProduct(ProductDTO product){
+        //ResponseEntity<ProductDTO> response = orderResilience.requestProduct(product);
+        ResponseEntity<ProductDTO> response = productClient.requestProduct(product);
+        if(response.getStatusCode()==HttpStatus.SERVICE_UNAVAILABLE)
+            throw new APIConnectionError("Communication with product-back failed.");
+        else if(response.getStatusCode()==HttpStatus.NOT_FOUND)// || response.getBody() == null
+            throw new NotFoundException("Product not found.");
+        else if(response.getStatusCode()!=HttpStatus.OK)
+            throw new GenericException("Request to product server failed.");
+        if(response.getBody() == null)
+            throw new GenericException("This product is no longer available.");
+        return response.getBody();
     }
 
     public Order addItemToOrder(Long orderId, Item item){
@@ -76,18 +90,9 @@ public class OrderService {
         
         ProductDTO product = new ProductDTO();
         product.setName(item.getName());
-        product.setQuantity(item.getQuantity());
-        
-        ResponseEntity<ProductDTO> response = orderResilience.requestProduct(product);
-        if(response.getStatusCode()==HttpStatus.SERVICE_UNAVAILABLE)
-            throw new APIConnectionError("Communication with product-back failed.");
-        else if(response.getStatusCode()==HttpStatus.NOT_FOUND)// || response.getBody() == null
-            throw new NotFoundException("Product not found.");
-        else if(response.getStatusCode()!=HttpStatus.OK)
-            throw new GenericException("Request to product server failed.");
-        
+        product.setQuantity(item.getQuantity());    
 
-        product = response.getBody();
+        product = requestProduct(product);
         item.setPrice(product.getPrice());
 
         List<Item> items = order.getItems();
@@ -107,11 +112,13 @@ public class OrderService {
         return repository.save(order);
     }
 
+    @Transactional(readOnly = false)
     private Order placeOrder(Order order){            
         order.setStatus(EnumStatusOrder.APPROVED);
         return repository.save(order);
     }
 
+    @Transactional(readOnly = false)
     private Order cancelOrder(Order order){
         ResponseEntity<List<ProductDTO>> response = orderResilience.increaseQuantity(order.getItems());
         if(response.getStatusCode()!=HttpStatus.OK)
@@ -121,6 +128,7 @@ public class OrderService {
         return repository.save(order);
     }
 
+    @Transactional(readOnly = false)
     private Order refuseOrder(Order order){
         ResponseEntity<List<ProductDTO>> response = orderResilience.increaseQuantity(order.getItems());
         if(response.getStatusCode()!=HttpStatus.OK)

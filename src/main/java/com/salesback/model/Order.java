@@ -33,6 +33,7 @@ public class Order {
 
     public Order(){
         this.totalPrice = 0.0;
+        this.status = EnumStatusOrder.CREATED;
         this.items = new ArrayList<>();
     }
 
