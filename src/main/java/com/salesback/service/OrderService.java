@@ -4,6 +4,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -37,13 +40,20 @@ public class OrderService {
         this.orderResilience = orderResilience;
     }
 
+    @Cacheable(value = "order", key = "id")
     public Order findById(Long id){
         return repository.findById(id)
             .orElseThrow(() -> new NotFoundException("Order not found."));
     }
 
+    @Cacheable("orders")
     public List<Order> findAll(){
         return repository.findAll();
+    }
+
+    @CachePut(value = "order", key = "#entity.id")
+    public Order update(Order entity){
+        return repository.save(entity);
     }
 
     public Order updateStatus(Long id, EnumStatusOrder status){
@@ -101,7 +111,7 @@ public class OrderService {
                 item2.setQuantity(item2.getQuantity()+item.getQuantity());
                 Double priceItem = product.getPrice()*item.getQuantity();
                 order.setTotalPrice(order.getTotalPrice()+priceItem);
-                return repository.save(order);
+                return update(order);
             }
         }
 
@@ -109,15 +119,19 @@ public class OrderService {
         order.setItems(items);
         Double priceItem = product.getPrice()*item.getQuantity();
         order.setTotalPrice(order.getTotalPrice()+priceItem);
-        return repository.save(order);
+        return update(order);
     }
 
+    @CacheEvict(value = "orders", allEntries = true)
+    @CachePut(value = "order", key = "#order.id")
     @Transactional(readOnly = false)
     private Order placeOrder(Order order){            
         order.setStatus(EnumStatusOrder.APPROVED);
         return repository.save(order);
     }
 
+    @CacheEvict(value = "orders", allEntries = true)
+    @CachePut(value = "order", key = "#order.id")
     @Transactional(readOnly = false)
     private Order cancelOrder(Order order){
         ResponseEntity<List<ProductDTO>> response = orderResilience.increaseQuantity(order.getItems());
@@ -128,6 +142,8 @@ public class OrderService {
         return repository.save(order);
     }
 
+    @CacheEvict(value = "orders", allEntries = true)
+    @CachePut(value = "order", key = "#order.id")
     @Transactional(readOnly = false)
     private Order refuseOrder(Order order){
         ResponseEntity<List<ProductDTO>> response = orderResilience.increaseQuantity(order.getItems());
