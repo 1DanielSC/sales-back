@@ -25,7 +25,7 @@ public class OrderResilience {
 
     public ResponseEntity<ProductDTO> requestProductFallBack(Throwable throwable){
         System.out.println("Circuit breaker (requestProduct): " + throwable.getMessage());
-        return null;
+        return ResponseEntity.internalServerError().build();
     }
 
     @CircuitBreaker(name = "productservice", fallbackMethod = "increaseQuantityFallBack")
@@ -35,7 +35,7 @@ public class OrderResilience {
 
     public ResponseEntity<ProductDTO> increaseQuantityFallBack(Throwable throwable){
         System.out.println("Circuit breaker (increaseQuantity): " + throwable.getMessage());
-        return null;
+        return ResponseEntity.internalServerError().build();
     }
 
 }

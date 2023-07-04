@@ -74,8 +74,9 @@ public class OrderService {
     }
 
     private ProductDTO requestProduct(ProductDTO product){
-        //ResponseEntity<ProductDTO> response = orderResilience.requestProduct(product);
+
         ResponseEntity<ProductDTO> response = productClient.requestProduct(product);
+
         if(response.getStatusCode()==HttpStatus.SERVICE_UNAVAILABLE)
             throw new APIConnectionError("Communication with product-back failed.");
         else if(response.getStatusCode()==HttpStatus.NOT_FOUND)// || response.getBody() == null
