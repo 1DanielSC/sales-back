@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
+// import org.springframework.cache.annotation.CacheEvict;
+// import org.springframework.cache.annotation.CachePut;
+// import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,6 @@ import com.salesback.model.Order;
 import com.salesback.model.dto.ProductDTO;
 import com.salesback.model.enums.EnumStatusOrder;
 import com.salesback.repository.OrderRepository;
-import com.salesback.service.interfaces.ProductServiceClient;
 
 @Service
 public class OrderService {
@@ -31,27 +30,23 @@ public class OrderService {
     private OrderRepository repository;
 
     @Autowired
-    private ProductServiceClient productClient;
+    private OrderResilience productClient;
 
-    private OrderResilience orderResilience;
-
-    @Autowired
-    public OrderService(OrderResilience orderResilience){
-        this.orderResilience = orderResilience;
-    }
-
-    @Cacheable(value = "order", key = "id")
+    // @Cacheable(value = "order", key = "#id")
     public Order findById(Long id){
+        System.out.println("Indo no banco...");
         return repository.findById(id)
             .orElseThrow(() -> new NotFoundException("Order not found."));
     }
 
-    @Cacheable("orders")
+    // @Cacheable("orders")
     public List<Order> findAll(){
+        System.out.println("Indo no banco...");
         return repository.findAll();
     }
 
-    @CachePut(value = "order", key = "#entity.id")
+    // @CacheEvict(value = "orders", allEntries = true)
+    // @CachePut(value = "order", key = "#entity.id")
     public Order update(Order entity){
         return repository.save(entity);
     }
@@ -122,19 +117,19 @@ public class OrderService {
         return update(order);
     }
 
-    @CacheEvict(value = "orders", allEntries = true)
-    @CachePut(value = "order", key = "#order.id")
+    // @CacheEvict(value = "orders", allEntries = true)
+    // @CachePut(value = "order", key = "#order.id")
     @Transactional(readOnly = false)
     private Order placeOrder(Order order){            
         order.setStatus(EnumStatusOrder.APPROVED);
         return repository.save(order);
     }
 
-    @CacheEvict(value = "orders", allEntries = true)
-    @CachePut(value = "order", key = "#order.id")
+    // @CacheEvict(value = "orders", allEntries = true)
+    // @CachePut(value = "order", key = "#order.id")
     @Transactional(readOnly = false)
     private Order cancelOrder(Order order){
-        ResponseEntity<List<ProductDTO>> response = orderResilience.increaseQuantity(order.getItems());
+        ResponseEntity<List<ProductDTO>> response = productClient.increaseQuantity(order.getItems());
         if(response.getStatusCode()!=HttpStatus.OK)
             throw new GenericException("Request to product server failed.");
 
@@ -142,11 +137,11 @@ public class OrderService {
         return repository.save(order);
     }
 
-    @CacheEvict(value = "orders", allEntries = true)
-    @CachePut(value = "order", key = "#order.id")
+    // @CacheEvict(value = "orders", allEntries = true)
+    // @CachePut(value = "order", key = "#order.id")
     @Transactional(readOnly = false)
     private Order refuseOrder(Order order){
-        ResponseEntity<List<ProductDTO>> response = orderResilience.increaseQuantity(order.getItems());
+        ResponseEntity<List<ProductDTO>> response = productClient.increaseQuantity(order.getItems());
         if(response.getStatusCode()!=HttpStatus.OK)
             throw new GenericException("Request to product server failed.");
 
