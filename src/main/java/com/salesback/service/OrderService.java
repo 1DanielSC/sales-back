@@ -34,14 +34,14 @@ public class OrderService {
 
     // @Cacheable(value = "order", key = "#id")
     public Order findById(Long id){
-        System.out.println("Indo no banco...");
+        // System.out.println("Indo no banco...");
         return repository.findById(id)
             .orElseThrow(() -> new NotFoundException("Order not found."));
     }
 
     // @Cacheable("orders")
     public List<Order> findAll(){
-        System.out.println("Indo no banco...");
+        // System.out.println("Indo no banco...");
         return repository.findAll();
     }
 
