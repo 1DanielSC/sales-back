@@ -21,10 +21,15 @@ public class OrderResilience {
     @Autowired
     private ProductServiceClient productClient;
 
-    @CircuitBreaker(name = "productservice", fallbackMethod = "requestProductFallBack")
-    @RateLimiter(name = "rate_productservice", fallbackMethod = "requestProductRateLimiterFallBack")
-    @Bulkhead(name = "bulk_productservice", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "requestProductBulkheadFallBack")
-    @Retry(name = "retry_productservice", fallbackMethod = "requestProductRetryFallBack")
+    /*
+     * Fallbacks comentados - https://stackoverflow.com/questions/71457925/resiliency4j-circuit-breaker-with-retry-configuration-not-working
+     * Para que cada anotação gere uma exceção.
+     */
+
+    @CircuitBreaker(name = "productservice")//, fallbackMethod = "requestProductFallBack")
+    @RateLimiter(name = "rate_productservice")//, fallbackMethod = "requestProductRateLimiterFallBack")
+    @Bulkhead(name = "bulk_productservice", type = Bulkhead.Type.SEMAPHORE)//, fallbackMethod = "requestProductBulkheadFallBack")
+    @Retry(name = "retry_productservice")//, fallbackMethod = "requestProductRetryFallBack")
     public ResponseEntity<ProductDTO> requestProduct(ProductDTO product){
         return productClient.requestProduct(product);
     }
@@ -53,8 +58,10 @@ public class OrderResilience {
         return ResponseEntity.internalServerError().build();
     }
 
-    @CircuitBreaker(name = "productservice", fallbackMethod = "increaseQuantityBulkheadFallBack")
-    @Bulkhead(name = "bulk_productservice", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "requestProductFallBack")
+    @CircuitBreaker(name = "productservice")//, fallbackMethod = "requestProductFallBack")
+    @RateLimiter(name = "rate_productservice")//, fallbackMethod = "requestProductRateLimiterFallBack")
+    @Bulkhead(name = "bulk_productservice", type = Bulkhead.Type.SEMAPHORE)//, fallbackMethod = "requestProductBulkheadFallBack")
+    @Retry(name = "retry_productservice")//, fallbackMethod = "requestProductRetryFallBack")
     public ResponseEntity<List<ProductDTO>> increaseQuantity(List<Item> items){
         return productClient.increaseQuantity(items);
     }
